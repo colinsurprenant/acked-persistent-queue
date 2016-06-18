@@ -27,12 +27,12 @@ public class AckedQueue implements Closeable {
         return null;
     }
 
-    public void ack(AckedQueueItem)
+    public void ack(AckedQueueItem item)
     {
 
     }
 
-    public void ack(List<AckedQueueItem>)
+    public void ack(List<AckedQueueItem> items)
     {
 
     }
