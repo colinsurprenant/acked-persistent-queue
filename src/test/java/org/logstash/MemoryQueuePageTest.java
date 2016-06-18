@@ -9,17 +9,18 @@ import static org.junit.Assert.*;
 
 public class MemoryQueuePageTest {
 
-    private static byte[] BYTES_16 = "abcdefghijklmnop".getBytes();
+    private static byte[] A_BYTES_16 = "aaaaaaaaaaaaaaaa".getBytes();
+    private static byte[] B_BYTES_16 = "bbbbbbbbbbbbbbbb".getBytes();
 
     @Test
     public void testSingleReadWrite() {
         MemoryQueuePage qp = new MemoryQueuePage(1024);
-        int head = qp.write(BYTES_16);
-        assertEquals(BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
+        int head = qp.write(A_BYTES_16);
+        assertEquals(A_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
         assertEquals(1, qp.unused());
         List<AckedQueueItem> items = qp.read(2);
         assertEquals(1, items.size());
-        assertArrayEquals(BYTES_16, items.get(0).getData());
+        assertArrayEquals(A_BYTES_16, items.get(0).getData());
         assertEquals(0, qp.unused());
     }
 
@@ -27,25 +28,53 @@ public class MemoryQueuePageTest {
     public void testOverflow() {
         MemoryQueuePage qp = new MemoryQueuePage(15);
         assertFalse(qp.writable(16));
-        assertEquals(0, qp.write(BYTES_16));
+        assertEquals(0, qp.write(A_BYTES_16));
 
         assertTrue(qp.writable(15 - MemoryQueuePage.OVERHEAD_BYTES));
         assertFalse(qp.writable(15 - MemoryQueuePage.OVERHEAD_BYTES + 1));
     }
 
     @Test
-    public void testDoubleReadWrite() {
+    public void testDoubleWriteRead() {
         MemoryQueuePage qp = new MemoryQueuePage(1024);
-        int head = qp.write(BYTES_16);
-        assertEquals(BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
+        int head = qp.write(A_BYTES_16);
+        assertEquals(A_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
         assertEquals(1, qp.unused());
 
-        head = qp.write(BYTES_16);
-        assertEquals((BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES) * 2, head);
+        head = qp.write(B_BYTES_16);
+        assertEquals((B_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES) * 2, head);
         assertEquals(2, qp.unused());
 
+        List<AckedQueueItem> items = qp.read(2);
+        assertEquals(0, qp.unused());
 
+        assertEquals(2, items.size());
+        assertArrayEquals(A_BYTES_16, items.get(0).getData());
+        assertArrayEquals(B_BYTES_16, items.get(1).getData());
     }
 
+    @Test
+    public void testDoubleWriteSingleRead() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        int head = qp.write(A_BYTES_16);
+        assertEquals(A_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
+        assertEquals(1, qp.unused());
+
+        head = qp.write(B_BYTES_16);
+        assertEquals((B_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES) * 2, head);
+        assertEquals(2, qp.unused());
+
+        List<AckedQueueItem> items = qp.read(1);
+        assertEquals(1, qp.unused());
+
+        assertEquals(1, items.size());
+        assertArrayEquals(A_BYTES_16, items.get(0).getData());
+
+        items = qp.read(1);
+        assertEquals(0, qp.unused());
+
+        assertEquals(1, items.size());
+        assertArrayEquals(B_BYTES_16, items.get(0).getData());
+    }
 }
 
