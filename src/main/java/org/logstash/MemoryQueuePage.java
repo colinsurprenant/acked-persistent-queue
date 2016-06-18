@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MemoryQueuePage implements QueuePage {
-    private final int INT_BYTE_SIZE = Integer.SIZE / Byte.SIZE;
+    private final static int INT_BYTE_SIZE = Integer.SIZE / Byte.SIZE;
+    public final static int OVERHEAD_BYTES = INT_BYTE_SIZE + INT_BYTE_SIZE;
 
     private ByteBuffer data;
     private int capacity;
@@ -21,7 +22,7 @@ public class MemoryQueuePage implements QueuePage {
 
     // @param capacity page byte size
     public MemoryQueuePage(int capacity) {
-        this.data = new ByteBuffer.allocate(capacity);
+        this.data = ByteBuffer.allocate(capacity);
         this.capacity = capacity;
         this.head = 0;
         this.tail = 0;
@@ -63,43 +64,26 @@ public class MemoryQueuePage implements QueuePage {
 
         this.unused.forEach(new IntConsumer() {
 
-            {@literal @}Override
+            @Override
             public void accept(int i) {
-                this.data.position(i);
+                data.position(i);
 
-                int dataSize = this.data.getInt();
+                int dataSize = data.getInt();
                 assert dataSize > 0;
 
                 byte[] payload = new byte[dataSize];;
-                this.data.get(payload);
+                data.get(payload);
 
                 // TODO: how/where should we track page index?
                 result.add(new AckedQueueItem(payload, 0, i));
+
+                // set this item as in-use.
+                unused.remove(i);
             }
 
         });
 
         return result;
-
-
-//        assert this.tail <= this.head;
-//
-//        if (this.tail == this.head) {
-//            return null;
-//        }
-//
-//        this.data.position(this.tail);
-//
-//        int dataSize = this.data.getInt();
-//
-//        assert dataSize > 0;
-//
-//        byte[] result = new byte[dataSize];
-//        this.data.get(result);
-//
-//        this.tail += dataSize + INT_BYTE_SIZE;
-//
-//        return result;
     }
 
     @Override
@@ -146,7 +130,7 @@ public class MemoryQueuePage implements QueuePage {
 
     private int dataWithOverhead(int dataSize)
     {
-        return INT_BYTE_SIZE + dataSize + INT_BYTE_SIZE;
+        return OVERHEAD_BYTES + dataSize;
     }
 
     private int maxReadOffset() {
