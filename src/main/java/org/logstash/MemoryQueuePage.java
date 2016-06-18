@@ -6,6 +6,7 @@ import org.roaringbitmap.RoaringBitmap;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class MemoryQueuePage implements QueuePage {
@@ -62,26 +63,45 @@ public class MemoryQueuePage implements QueuePage {
     public List<AckedQueueItem> read(int n) {
         List<AckedQueueItem> result = new ArrayList<>();
 
-        this.unused.forEach(new IntConsumer() {
+//        this.unused.forEach(new IntConsumer() {
+//
+//            @Override
+//            public void accept(int i) {
+//                data.position(i);
+//
+//                int dataSize = data.getInt();
+//                assert dataSize > 0;
+//
+//                byte[] payload = new byte[dataSize];;
+//                data.get(payload);
+//
+//                // TODO: how/where should we track page index?
+//                result.add(new AckedQueueItem(payload, 0, i));
+//
+//                // set this item as in-use.
+//                unused.remove(i);
+//            }
+//
+//        });
 
-            @Override
-            public void accept(int i) {
-                data.position(i);
+        Iterator i = new LimitedIterator(this.unused.iterator(), n);
+        while (i.hasNext()) {
+            int offset = (int) i.next();
 
-                int dataSize = data.getInt();
-                assert dataSize > 0;
+            this.data.position(offset);
 
-                byte[] payload = new byte[dataSize];;
-                data.get(payload);
+            int dataSize = this.data.getInt();
+            assert dataSize > 0;
 
-                // TODO: how/where should we track page index?
-                result.add(new AckedQueueItem(payload, 0, i));
+            byte[] payload = new byte[dataSize];;
+            this.data.get(payload);
 
-                // set this item as in-use.
-                unused.remove(i);
-            }
+            // TODO: how/where should we track page index?
+            result.add(new AckedQueueItem(payload, 0, offset));
 
-        });
+            // set this item as in-use.
+            unused.remove(offset);
+         }
 
         return result;
     }
@@ -89,7 +109,6 @@ public class MemoryQueuePage implements QueuePage {
     @Override
     public void ack(List<AckedQueueItem> items) {
         items.forEach(item -> ack(item.pageOffet));
-
     }
 
     @Override
