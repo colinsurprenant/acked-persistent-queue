@@ -12,8 +12,10 @@ public class MemoryQueuePageTest {
     private static byte[] A_BYTES_16 = "aaaaaaaaaaaaaaaa".getBytes();
     private static byte[] B_BYTES_16 = "bbbbbbbbbbbbbbbb".getBytes();
 
+    // without acks
+
     @Test
-    public void testSingleReadWrite() {
+    public void testSingleWriteRead() {
         MemoryQueuePage qp = new MemoryQueuePage(1024);
         int head = qp.write(A_BYTES_16);
         assertEquals(A_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
@@ -75,6 +77,55 @@ public class MemoryQueuePageTest {
 
         assertEquals(1, items.size());
         assertArrayEquals(B_BYTES_16, items.get(0).getData());
+    }
+
+    @Test
+    public void testWriteReadReset() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        qp.write(A_BYTES_16);
+        qp.write(B_BYTES_16);
+
+        List<AckedQueueItem> items = qp.read(1);
+        assertEquals(1, items.size());
+        items = qp.read(1);
+        assertEquals(1, items.size());
+
+        assertEquals(0, qp.unused());
+
+        qp.resetUnused();
+
+        // all items are now maked as unused, we should be able to re-read all items
+        assertEquals(2, qp.unused());
+
+        items = qp.read(1);
+        assertEquals(1, items.size());
+        items = qp.read(1);
+        assertEquals(1, items.size());
+
+        assertEquals(0, qp.unused());
+    }
+
+    // with acks
+
+    @Test
+    public void testWriteReadAckReset() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        qp.write(A_BYTES_16);
+        qp.write(B_BYTES_16);
+
+        List<AckedQueueItem> items = qp.read(1);
+        assertEquals(1, items.size());
+        qp.ack(items);
+
+        items = qp.read(1);
+        assertEquals(1, items.size());
+        qp.ack(items);
+
+        assertEquals(0, qp.unused());
+
+        qp.resetUnused();
+
+        assertEquals(0, qp.unused());
     }
 }
 
