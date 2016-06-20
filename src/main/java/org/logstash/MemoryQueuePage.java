@@ -142,6 +142,11 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     @Override
+    public RoaringBitmap getUnacked() {
+        return this.unacked;
+    }
+
+    @Override
     public void close() throws IOException {
         // TBD
     }
@@ -168,7 +173,6 @@ public class MemoryQueuePage implements QueuePage {
     private int maxReadOffset() {
         return (this.head - (INT_BYTE_SIZE + 2));
     }
-
 
     // find the head of an existing byte buffer by looking from the beginning and skipping over items
     // until the last one

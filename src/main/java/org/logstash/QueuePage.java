@@ -1,5 +1,7 @@
 package org.logstash;
 
+import org.roaringbitmap.RoaringBitmap;
+
 import java.io.Closeable;
 import java.util.List;
 
@@ -35,5 +37,10 @@ public interface QueuePage extends Closeable {
     // @return the page capacity in bytes
     int capacity();
 
+    // @param offset set this page head offset
+    // @return this QueuePage object
     QueuePage setHead(int offset);
+
+    // @return this page unacked state bitmap
+    RoaringBitmap getUnacked();
 }
