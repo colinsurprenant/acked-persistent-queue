@@ -2,6 +2,7 @@ package org.logstash;
 
 import org.roaringbitmap.IntConsumer;
 import org.roaringbitmap.RoaringBitmap;
+import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -84,7 +85,11 @@ public class MemoryQueuePage implements QueuePage {
 //
 //        });
 
-        Iterator i = new LimitedIterator(this.unused.iterator(), n);
+
+        // select items that are both marked as unused and unacked
+        RoaringBitmap selected = RoaringBitmap.and(this.unused, this.unacked);
+
+        Iterator i = new LimitedIterator(selected.iterator(), n);
         while (i.hasNext()) {
             int offset = (int) i.next();
 
@@ -99,7 +104,7 @@ public class MemoryQueuePage implements QueuePage {
             // TODO: how/where should we track page index?
             result.add(new AckedQueueItem(payload, 0, offset));
 
-            // set this item as in-use.
+            // set this item as in-use (unset unused bit)
             unused.remove(offset);
          }
 
@@ -141,6 +146,11 @@ public class MemoryQueuePage implements QueuePage {
     @Override
     public void close() throws IOException {
         // TBD
+    }
+
+    public void resetUnused() {
+        // reset unacked bits to
+        this.unused = new RoaringBitmap(this.unacked.toMutableRoaringBitmap());
     }
 
     private int available() {
