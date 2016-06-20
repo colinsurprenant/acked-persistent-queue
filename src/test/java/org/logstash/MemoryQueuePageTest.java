@@ -80,6 +80,34 @@ public class MemoryQueuePageTest {
     }
 
     @Test
+    public void testLargerRead() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        qp.write(A_BYTES_16);
+        qp.write(B_BYTES_16);
+        assertEquals(2, qp.unused());
+
+        List<AckedQueueItem> items = qp.read(3);
+        assertEquals(0, qp.unused());
+        assertEquals(2, items.size());
+    }
+
+    @Test
+    public void testEmptyRead() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        qp.write(A_BYTES_16);
+        qp.write(B_BYTES_16);
+        assertEquals(2, qp.unused());
+
+        List<AckedQueueItem> items = qp.read(2);
+        assertEquals(0, qp.unused());
+        assertEquals(2, items.size());
+
+        items = qp.read(2);
+        assertEquals(0, qp.unused());
+        assertEquals(0, items.size());
+    }
+
+    @Test
     public void testWriteReadReset() {
         MemoryQueuePage qp = new MemoryQueuePage(1024);
         qp.write(A_BYTES_16);
@@ -126,6 +154,59 @@ public class MemoryQueuePageTest {
         qp.resetUnused();
 
         assertEquals(0, qp.unused());
+    }
+
+    @Test
+    public void testWriteReadPartialAckReset() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        qp.write(A_BYTES_16);
+        qp.write(B_BYTES_16);
+
+        List<AckedQueueItem> items = qp.read(1);
+        assertEquals(1, items.size());
+
+        assertEquals(1, qp.unused());
+
+        qp.ack(items);
+
+        assertEquals(1, qp.unused());
+
+        qp.resetUnused();
+
+        assertEquals(1, qp.unused());
+    }
+
+    @Test
+    public void testWritePartialAckReset() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        qp.write(A_BYTES_16);
+        qp.write(B_BYTES_16);
+
+        List<AckedQueueItem> items = qp.read(1);
+        qp.resetUnused();
+
+        assertEquals(2, qp.unused());
+
+        qp.ack(items);
+
+        assertEquals(1, qp.unused());
+    }
+
+    @Test
+    public void testWritePartialAckRead() {
+        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        qp.write(A_BYTES_16);
+        qp.write(B_BYTES_16);
+
+        List<AckedQueueItem> items = qp.read(1);
+        qp.resetUnused();
+
+        assertEquals(2, qp.unused());
+
+        qp.ack(items);
+
+        items = qp.read(2);
+        assertEquals(1, items.size());
     }
 }
 
