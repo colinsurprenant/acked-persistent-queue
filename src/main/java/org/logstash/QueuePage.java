@@ -36,6 +36,4 @@ public interface QueuePage extends Closeable {
     int capacity();
 
     QueuePage setHead(int offset);
-
-    QueuePage setTail(int offset);
 }

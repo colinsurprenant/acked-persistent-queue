@@ -13,23 +13,39 @@ public class MemoryQueuePage implements QueuePage {
     public final static int OVERHEAD_BYTES = INT_BYTE_SIZE + INT_BYTE_SIZE;
 
     private final static List<AckedQueueItem> EMPTY_RESULT = new ArrayList<>(0);
+    private final static int EMPTY_PAGE_HEAD = 0;
 
     private ByteBuffer data;
-    private int capacity;
-    private int head;
-    private int tail;
+    private int capacity; // this page bytes capacity
+    private int head;     // this page head offset
+    private int index;    // this page index number
 
     private RoaringBitmap unused;
     private RoaringBitmap unacked;
 
     // @param capacity page byte size
     public MemoryQueuePage(int capacity) {
-        this.data = ByteBuffer.allocate(capacity);
+        this(capacity, 0);
+    }
+
+    // @param capacity page byte size
+    // @param index the page index number
+    public MemoryQueuePage(int capacity, int index) {
+        this(capacity, index, ByteBuffer.allocate(capacity), EMPTY_PAGE_HEAD, new RoaringBitmap());
+    }
+
+    // @param capacity page byte size
+    // @param index the page index number
+    // @param data initial data for this page
+    // @param head the page head offset, @see MemoryQueuePage.findHead() if it needs to be resolved
+    // @param unacked initial unacked state bitmap for this page
+    public MemoryQueuePage(int capacity, int index, ByteBuffer data, int head, RoaringBitmap unacked) {
+        this.data = data;
+        this.index = index;
         this.capacity = capacity;
-        this.head = 0;
-        this.tail = 0;
-        this.unused = new RoaringBitmap();
-        this.unacked = new RoaringBitmap();
+        this.unused = unacked;
+        this.unacked = new RoaringBitmap(unacked.toMutableRoaringBitmap());
+        this.head = head;
     }
 
     // @return then new head position or 0 if not enough space left for data
@@ -126,12 +142,6 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     @Override
-    public QueuePage setTail(int offset) {
-        this.tail = offset;
-        return this;
-    }
-
-    @Override
     public void close() throws IOException {
         // TBD
     }
@@ -157,6 +167,27 @@ public class MemoryQueuePage implements QueuePage {
 
     private int maxReadOffset() {
         return (this.head - (INT_BYTE_SIZE + 2));
+    }
+
+
+    // find the head of an existing byte buffer by looking from the beginning and skipping over items
+    // until the last one
+    // @param data a properly formatted byte buffer
+    // @return int the discovered page head offset
+    private static int findHead(ByteBuffer data) {
+        int offset = 0;
+        int dataSize;
+
+        do {
+            data.position(offset);
+
+            dataSize = data.getInt();
+            if (dataSize > 0) {
+                offset += INT_BYTE_SIZE + dataSize;
+            }
+        } while (dataSize > 0);
+
+        return offset;
     }
 }
 
