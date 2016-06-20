@@ -13,15 +13,21 @@ public interface QueuePage extends Closeable {
     // @return true if the number of bytes is writable in this queue page
     boolean writable(int bytes);
 
-    // read next n unusued item and mark them as in-use
-    // @return List of read AckedQueueItem
+    // non-blocking read up to next n unusued item and mark them as in-use. if less than n items are available
+    // this will be read and returned immediately.
+    // @return List of read AckedQueueItem, or empty list if no items are read
     List<AckedQueueItem> read(int n);
+
+    // blocking timed-out read of next n unusued item and mark them as in-use. if less than n items are available
+    // this call will block and wait up to timeout ms and return an empty list if n items were not available.
+    // @return List of read AckedQueueItem, or empty list if timeout is reached
+    List<AckedQueueItem> read(int n, int timeout);
 
     // mark a list of AckedQueueItem as acknoleged
     void ack(List<AckedQueueItem> items);
 
-    // mark a single item position as acknoledged
-    void ack(int position);
+    // mark a single item position offset as acknoledged
+    void ack(int offset);
 
     // @return the number of unsued items
     int unused();
@@ -29,7 +35,7 @@ public interface QueuePage extends Closeable {
     // @return the page capacity in bytes
     int capacity();
 
-    QueuePage setHead(int position);
+    QueuePage setHead(int offset);
 
-    QueuePage setTail(int position);
+    QueuePage setTail(int offset);
 }

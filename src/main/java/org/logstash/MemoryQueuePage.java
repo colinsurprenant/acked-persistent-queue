@@ -1,8 +1,6 @@
 package org.logstash;
 
-import org.roaringbitmap.IntConsumer;
 import org.roaringbitmap.RoaringBitmap;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,6 +11,8 @@ import java.util.List;
 public class MemoryQueuePage implements QueuePage {
     private final static int INT_BYTE_SIZE = Integer.SIZE / Byte.SIZE;
     public final static int OVERHEAD_BYTES = INT_BYTE_SIZE + INT_BYTE_SIZE;
+
+    private final static List<AckedQueueItem> EMPTY_RESULT = new ArrayList<>(0);
 
     private ByteBuffer data;
     private int capacity;
@@ -41,7 +41,7 @@ public class MemoryQueuePage implements QueuePage {
 
         this.data.position(this.head);
 
-        // this write sequence total bytes must equate dataWithOverhead(data.length)
+        // this write sequence total bytes must equate totalBytes(data.length)
         this.data.putInt(data.length);
         this.data.put(data);
         this.data.putInt(0);
@@ -50,46 +50,28 @@ public class MemoryQueuePage implements QueuePage {
         this.unused.add(this.head);
         this.unacked.add(this.head);
 
-        this.head += dataWithOverhead(data.length);
+        this.head += totalBytes(data.length);
 
         return this.head;
    }
 
     @Override
     public boolean writable(int bytes) {
-        return (available() >= dataWithOverhead(bytes));
+        return (availableBytes() >= totalBytes(bytes));
     }
 
     @Override
     public List<AckedQueueItem> read(int n) {
+        RoaringBitmap readable = readable();
+
+        // empty result optimization
+        if (readable.getCardinality() <= 0) {
+            return EMPTY_RESULT;
+        }
+
         List<AckedQueueItem> result = new ArrayList<>();
 
-//        this.unused.forEach(new IntConsumer() {
-//
-//            @Override
-//            public void accept(int i) {
-//                data.position(i);
-//
-//                int dataSize = data.getInt();
-//                assert dataSize > 0;
-//
-//                byte[] payload = new byte[dataSize];;
-//                data.get(payload);
-//
-//                // TODO: how/where should we track page index?
-//                result.add(new AckedQueueItem(payload, 0, i));
-//
-//                // set this item as in-use.
-//                unused.remove(i);
-//            }
-//
-//        });
-
-
-        // select items that are both marked as unused and unacked
-        RoaringBitmap selected = RoaringBitmap.and(this.unused, this.unacked);
-
-        Iterator i = new LimitedIterator(selected.iterator(), n);
+        Iterator i = new LimitedIterator(readable.iterator(), n);
         while (i.hasNext()) {
             int offset = (int) i.next();
 
@@ -112,18 +94,24 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     @Override
+    public List<AckedQueueItem> read(int n, int timeout) {
+        // TODO: TBD
+        return EMPTY_RESULT;
+    }
+
+    @Override
     public void ack(List<AckedQueueItem> items) {
         items.forEach(item -> ack(item.pageOffet));
     }
 
     @Override
-    public void ack(int position) {
-        this.unacked.remove(position);
+    public void ack(int offset) {
+        this.unacked.remove(offset);
     }
 
     @Override
     public int unused() {
-        return this.unused.getCardinality();
+        return readable().getCardinality();
     }
 
     @Override
@@ -132,14 +120,14 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     @Override
-    public QueuePage setHead(int position) {
-        this.head = position;
+    public QueuePage setHead(int offset) {
+        this.head = offset;
         return this;
     }
 
     @Override
-    public QueuePage setTail(int position) {
-        this.tail = position;
+    public QueuePage setTail(int offset) {
+        this.tail = offset;
         return this;
     }
 
@@ -149,15 +137,20 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     public void resetUnused() {
-        // reset unacked bits to
+        // reset unused bits to the state of the unacked bits
         this.unused = new RoaringBitmap(this.unacked.toMutableRoaringBitmap());
     }
 
-    private int available() {
+    private int availableBytes() {
         return this.capacity - this.head;
     }
 
-    private int dataWithOverhead(int dataSize)
+    private RoaringBitmap readable() {
+        // select items that are both marked as unused and unacked
+        return RoaringBitmap.and(this.unused, this.unacked);
+    }
+
+    private int totalBytes(int dataSize)
     {
         return OVERHEAD_BYTES + dataSize;
     }
