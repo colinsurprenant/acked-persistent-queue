@@ -104,9 +104,20 @@ public class PageHandler implements Closeable {
         return EMPTY_RESULT;
     }
 
-    // mark a list of Element as acknoleged
+    // mark a list of Element as acknowledged
     void ack(List<Element> items) {
-        // TBD
+        Map<Long, List<Element>> partitions = partitionByPage(items);
+
+        // TODO: prioritize partition by pages that are already live/cached?
+
+        for (Long pageIndex : partitions.keySet()) {
+            Page p = page(pageIndex);
+            p.ack(partitions.get(pageIndex));
+
+            // TODO: add check for fully acked page
+
+            // TODO: fire transaction logging here?
+        }
     }
 
 
@@ -115,6 +126,9 @@ public class PageHandler implements Closeable {
         // TBD
     }
 
+    // page is basically the byte buffer pages opening/caching strategy
+    // TODO: it should probably be extracted into its own class where
+    // alternate strategies could be implemented.
     // @param index the page index to retrieve
     private Page page(long index) {
         // TODO: adjust implementation for correct live pages handling
@@ -132,5 +146,22 @@ public class PageHandler implements Closeable {
 
     private boolean lastPage(long index) {
         return index >= this.meta.getHeadPageIndex();
+    }
+
+    private Map<Long, List<Element>> partitionByPage(List<Element> elements) {
+        Map<Long, List<Element>> partitions = new HashMap<>();
+
+        for (Element e : elements) {
+            List<Element> partition = partitions.get(e.getPageIndex());
+
+            if (partition == null)) {
+                partition = new ArrayList<>();
+                partitions.put(e.getPageIndex(), partition);
+            }
+
+            partition.add(e);
+        }
+
+        return partitions;
     }
 }
