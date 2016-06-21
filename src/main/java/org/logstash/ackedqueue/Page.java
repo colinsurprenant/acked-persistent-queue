@@ -3,9 +3,13 @@ package org.logstash.ackedqueue;
 import org.roaringbitmap.RoaringBitmap;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.List;
 
 public interface Page extends Closeable {
+
+    int INT_BYTE_SIZE = Integer.SIZE / Byte.SIZE;
+    int OVERHEAD_BYTES = INT_BYTE_SIZE + INT_BYTE_SIZE;
 
     // write at the page head
     // @return then new head position or 0 if not enough space left for data
@@ -38,8 +42,10 @@ public interface Page extends Closeable {
     int capacity();
 
     // @param offset set this page head offset
-    // @return this Page object
-    Page setHead(int offset);
+    void setHead(int offset);
+
+    // @return this page head offset
+    int getHead();
 
     // @return this page unacked state bitmap
     RoaringBitmap getUnacked();

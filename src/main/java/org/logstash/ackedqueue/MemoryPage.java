@@ -9,16 +9,13 @@ import java.util.Iterator;
 import java.util.List;
 
 public class MemoryPage implements Page {
-    private final static int INT_BYTE_SIZE = Integer.SIZE / Byte.SIZE;
-    public final static int OVERHEAD_BYTES = INT_BYTE_SIZE + INT_BYTE_SIZE;
-
     private final static List<Element> EMPTY_RESULT = new ArrayList<>(0);
     private final static int EMPTY_PAGE_HEAD = 0;
 
     private ByteBuffer data;
     private int capacity; // this page bytes capacity
     private int head;     // this page head offset
-    private int index;    // this page index number
+    private long index;    // this page index number
 
     private RoaringBitmap unused;
     private RoaringBitmap unacked;
@@ -30,7 +27,7 @@ public class MemoryPage implements Page {
 
     // @param capacity page byte size
     // @param index the page index number
-    public MemoryPage(int capacity, int index) {
+    public MemoryPage(int capacity, long index) {
         this(capacity, index, ByteBuffer.allocate(capacity), EMPTY_PAGE_HEAD, new RoaringBitmap());
     }
 
@@ -39,7 +36,7 @@ public class MemoryPage implements Page {
     // @param data initial data for this page
     // @param head the page head offset, @see MemoryPage.findHead() if it needs to be resolved
     // @param unacked initial unacked state bitmap for this page
-    public MemoryPage(int capacity, int index, ByteBuffer data, int head, RoaringBitmap unacked) {
+    public MemoryPage(int capacity, long index, ByteBuffer data, int head, RoaringBitmap unacked) {
         this.data = data;
         this.index = index;
         this.capacity = capacity;
@@ -117,7 +114,7 @@ public class MemoryPage implements Page {
 
     @Override
     public void ack(List<Element> items) {
-        items.forEach(item -> ack(item.pageOffet));
+        items.forEach(item -> ack(item.getPageOffet()));
     }
 
     @Override
@@ -136,9 +133,13 @@ public class MemoryPage implements Page {
     }
 
     @Override
-    public Page setHead(int offset) {
+    public void setHead(int offset) {
         this.head = offset;
-        return this;
+    }
+
+    @Override
+    public int getHead() {
+        return this.head;
     }
 
     @Override

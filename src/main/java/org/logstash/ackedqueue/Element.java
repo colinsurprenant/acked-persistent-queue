@@ -4,9 +4,9 @@ import java.io.Serializable;
 
 public class Element implements Serializable {
 
-    public final byte[] data;
-    public final long pageIndex;
-    public final int pageOffet;
+    private final byte[] data;
+    private final long pageIndex;
+    private final int pageOffet;
 
     public Element(byte[] data, long pageIndex, int pageOffset) {
         this.data = data;

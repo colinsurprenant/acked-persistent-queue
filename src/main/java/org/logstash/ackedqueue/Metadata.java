@@ -9,8 +9,16 @@ public class Metadata implements Closeable {
     private long headPageIndex;
     private int headPageOffset;
 
-    // tail tracking for reads. offset tracking is not necessary since it uses the per-page bitsets
-    private long tailPageIndex;
+    // tail tracking, offset tracking is not necessary since it uses the per-page bitsets
+    private long unackedTailPageIndex; // tail page with the oldest unacked bits
+    private long unusedTailPageIndex;  // tail page with the oldest unused bits
+
+    // in use page byte size
+    private int pageSize;
+
+    public Metadata() {
+        // TBD
+    }
 
     public long getHeadPageIndex() {
         return headPageIndex;
@@ -28,12 +36,28 @@ public class Metadata implements Closeable {
         this.headPageOffset = headPageOffset;
     }
 
-    public long getTailPageIndex() {
-        return tailPageIndex;
+    public long getUnackedTailPageIndex() {
+        return unackedTailPageIndex;
     }
 
-    public void setTailPageIndex(long tailPageIndex) {
-        this.tailPageIndex = tailPageIndex;
+    public void setUnackedTailPageIndex(long unackedTailPageIndex) {
+        this.unackedTailPageIndex = unackedTailPageIndex;
+    }
+
+    public long getUnusedTailPageIndex() {
+        return unusedTailPageIndex;
+    }
+
+    public void setUnusedTailPageIndex(long unusedTailPageIndex) {
+        this.unusedTailPageIndex = unusedTailPageIndex;
+    }
+
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(int pageSize) {
+        this.pageSize = pageSize;
     }
 
     @Override
