@@ -1,4 +1,4 @@
-package org.logstash;
+package org.logstash.ackedqueue;
 
 import java.io.Serializable;
 
