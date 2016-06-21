@@ -4,19 +4,21 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class BatchedIterator<T> implements Iterator<T> {
-    private Iterator<T> wrapped;
+    private Iterator<T> delegate;
     private int limit;
     private int iterated;
 
-    public BatchedIterator(Iterator<T> wrapped, int limit) {
-        this.wrapped = wrapped;
+    // @param delegate the original iterator to batch
+    // @param limit the bach size or the maximum number or elements to iterator over
+    public BatchedIterator(Iterator<T> delegate, int limit) {
+        this.delegate = delegate;
         this.limit = limit;
     }
 
 
     public boolean hasNext() {
         if (iterated < limit) {
-            return wrapped.hasNext();
+            return delegate.hasNext();
         }
         return false;
     }
@@ -27,6 +29,6 @@ public class BatchedIterator<T> implements Iterator<T> {
         }
 
         iterated++;
-        return wrapped.next();
+        return delegate.next();
     }
 }
