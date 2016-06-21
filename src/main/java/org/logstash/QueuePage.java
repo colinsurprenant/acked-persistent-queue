@@ -16,7 +16,7 @@ public interface QueuePage extends Closeable {
     boolean writable(int bytes);
 
     // non-blocking read up to next n unusued item and mark them as in-use. if less than n items are available
-    // this will be read and returned immediately.
+    // these will be read and returned immediately.
     // @return List of read AckedQueueItem, or empty list if no items are read
     List<AckedQueueItem> read(int n);
 
