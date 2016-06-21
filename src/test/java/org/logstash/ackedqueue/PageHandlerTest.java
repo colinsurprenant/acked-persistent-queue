@@ -108,5 +108,21 @@ public class PageHandlerTest {
         result = ph.read(1);
         assertEquals(0 , result.size());
     }
+
+
+    // acking
+
+    @Test
+    public void testSingleWriteReadAck() throws FileNotFoundException {
+        PageHandler ph = new PageHandler("/tmp", A_BYTES_16.length + Page.OVERHEAD_BYTES);
+        ph.open();
+        ph.write(A_BYTES_16);
+        List<Element> result = ph.read(1);
+        assertEquals(1 , result.size());
+        assertArrayEquals(A_BYTES_16, result.get(0).getData());
+        assertEquals(0, result.get(0).getPageIndex());
+        assertEquals(0, result.get(0).getPageOffet());
+    }
+
 }
 
