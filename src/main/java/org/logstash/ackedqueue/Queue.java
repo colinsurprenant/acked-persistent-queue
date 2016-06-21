@@ -4,7 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
-public class AckedQueue implements Closeable {
+public class Queue implements Closeable {
 
     /**
      * Adds an item at the queue tail
@@ -17,22 +17,22 @@ public class AckedQueue implements Closeable {
 
     }
 
-    public AckedQueueItem use() throws IOException
+    public Element use() throws IOException
     {
         return null;
     }
 
-    public List<AckedQueueItem> use(int batchSize) throws IOException
+    public List<Element> use(int batchSize) throws IOException
     {
         return null;
     }
 
-    public void ack(AckedQueueItem item)
+    public void ack(Element item)
     {
 
     }
 
-    public void ack(List<AckedQueueItem> items)
+    public void ack(List<Element> items)
     {
 
     }

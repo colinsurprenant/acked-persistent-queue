@@ -5,7 +5,7 @@ import org.roaringbitmap.RoaringBitmap;
 import java.io.Closeable;
 import java.util.List;
 
-public interface QueuePage extends Closeable {
+public interface Page extends Closeable {
 
     // write at the page head
     // @return then new head position or 0 if not enough space left for data
@@ -17,16 +17,16 @@ public interface QueuePage extends Closeable {
 
     // non-blocking read up to next n unusued item and mark them as in-use. if less than n items are available
     // these will be read and returned immediately.
-    // @return List of read AckedQueueItem, or empty list if no items are read
-    List<AckedQueueItem> read(int n);
+    // @return List of read Element, or empty list if no items are read
+    List<Element> read(int n);
 
     // blocking timed-out read of next n unusued item and mark them as in-use. if less than n items are available
     // this call will block and wait up to timeout ms and return an empty list if n items were not available.
-    // @return List of read AckedQueueItem, or empty list if timeout is reached
-    List<AckedQueueItem> read(int n, int timeout);
+    // @return List of read Element, or empty list if timeout is reached
+    List<Element> read(int n, int timeout);
 
-    // mark a list of AckedQueueItem as acknoleged
-    void ack(List<AckedQueueItem> items);
+    // mark a list of Element as acknoleged
+    void ack(List<Element> items);
 
     // mark a single item position offset as acknoledged
     void ack(int offset);
@@ -38,8 +38,8 @@ public interface QueuePage extends Closeable {
     int capacity();
 
     // @param offset set this page head offset
-    // @return this QueuePage object
-    QueuePage setHead(int offset);
+    // @return this Page object
+    Page setHead(int offset);
 
     // @return this page unacked state bitmap
     RoaringBitmap getUnacked();

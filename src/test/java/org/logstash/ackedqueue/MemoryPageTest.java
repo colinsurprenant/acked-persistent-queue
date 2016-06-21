@@ -7,7 +7,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class MemoryQueuePageTest {
+public class MemoryPageTest {
 
     private static byte[] A_BYTES_16 = "aaaaaaaaaaaaaaaa".getBytes();
     private static byte[] B_BYTES_16 = "bbbbbbbbbbbbbbbb".getBytes();
@@ -16,11 +16,11 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testSingleWriteRead() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         int head = qp.write(A_BYTES_16);
-        assertEquals(A_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
+        assertEquals(A_BYTES_16.length + MemoryPage.OVERHEAD_BYTES, head);
         assertEquals(1, qp.unused());
-        List<AckedQueueItem> items = qp.read(2);
+        List<Element> items = qp.read(2);
         assertEquals(1, items.size());
         assertArrayEquals(A_BYTES_16, items.get(0).getData());
         assertEquals(0, qp.unused());
@@ -28,26 +28,26 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testOverflow() {
-        MemoryQueuePage qp = new MemoryQueuePage(15);
+        MemoryPage qp = new MemoryPage(15);
         assertFalse(qp.writable(16));
         assertEquals(0, qp.write(A_BYTES_16));
 
-        assertTrue(qp.writable(15 - MemoryQueuePage.OVERHEAD_BYTES));
-        assertFalse(qp.writable(15 - MemoryQueuePage.OVERHEAD_BYTES + 1));
+        assertTrue(qp.writable(15 - MemoryPage.OVERHEAD_BYTES));
+        assertFalse(qp.writable(15 - MemoryPage.OVERHEAD_BYTES + 1));
     }
 
     @Test
     public void testDoubleWriteRead() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         int head = qp.write(A_BYTES_16);
-        assertEquals(A_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
+        assertEquals(A_BYTES_16.length + MemoryPage.OVERHEAD_BYTES, head);
         assertEquals(1, qp.unused());
 
         head = qp.write(B_BYTES_16);
-        assertEquals((B_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES) * 2, head);
+        assertEquals((B_BYTES_16.length + MemoryPage.OVERHEAD_BYTES) * 2, head);
         assertEquals(2, qp.unused());
 
-        List<AckedQueueItem> items = qp.read(2);
+        List<Element> items = qp.read(2);
         assertEquals(0, qp.unused());
 
         assertEquals(2, items.size());
@@ -57,16 +57,16 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testDoubleWriteSingleRead() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         int head = qp.write(A_BYTES_16);
-        assertEquals(A_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES, head);
+        assertEquals(A_BYTES_16.length + MemoryPage.OVERHEAD_BYTES, head);
         assertEquals(1, qp.unused());
 
         head = qp.write(B_BYTES_16);
-        assertEquals((B_BYTES_16.length + MemoryQueuePage.OVERHEAD_BYTES) * 2, head);
+        assertEquals((B_BYTES_16.length + MemoryPage.OVERHEAD_BYTES) * 2, head);
         assertEquals(2, qp.unused());
 
-        List<AckedQueueItem> items = qp.read(1);
+        List<Element> items = qp.read(1);
         assertEquals(1, qp.unused());
 
         assertEquals(1, items.size());
@@ -81,24 +81,24 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testLargerRead() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         qp.write(A_BYTES_16);
         qp.write(B_BYTES_16);
         assertEquals(2, qp.unused());
 
-        List<AckedQueueItem> items = qp.read(3);
+        List<Element> items = qp.read(3);
         assertEquals(0, qp.unused());
         assertEquals(2, items.size());
     }
 
     @Test
     public void testEmptyRead() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         qp.write(A_BYTES_16);
         qp.write(B_BYTES_16);
         assertEquals(2, qp.unused());
 
-        List<AckedQueueItem> items = qp.read(2);
+        List<Element> items = qp.read(2);
         assertEquals(0, qp.unused());
         assertEquals(2, items.size());
 
@@ -109,11 +109,11 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testWriteReadReset() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         qp.write(A_BYTES_16);
         qp.write(B_BYTES_16);
 
-        List<AckedQueueItem> items = qp.read(1);
+        List<Element> items = qp.read(1);
         assertEquals(1, items.size());
         items = qp.read(1);
         assertEquals(1, items.size());
@@ -137,11 +137,11 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testWriteReadAckReset() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         qp.write(A_BYTES_16);
         qp.write(B_BYTES_16);
 
-        List<AckedQueueItem> items = qp.read(1);
+        List<Element> items = qp.read(1);
         assertEquals(1, items.size());
         qp.ack(items);
 
@@ -158,11 +158,11 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testWriteReadPartialAckReset() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         qp.write(A_BYTES_16);
         qp.write(B_BYTES_16);
 
-        List<AckedQueueItem> items = qp.read(1);
+        List<Element> items = qp.read(1);
         assertEquals(1, items.size());
 
         assertEquals(1, qp.unused());
@@ -178,11 +178,11 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testWritePartialAckReset() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         qp.write(A_BYTES_16);
         qp.write(B_BYTES_16);
 
-        List<AckedQueueItem> items = qp.read(1);
+        List<Element> items = qp.read(1);
         qp.resetUnused();
 
         assertEquals(2, qp.unused());
@@ -194,11 +194,11 @@ public class MemoryQueuePageTest {
 
     @Test
     public void testWritePartialAckRead() {
-        MemoryQueuePage qp = new MemoryQueuePage(1024);
+        MemoryPage qp = new MemoryPage(1024);
         qp.write(A_BYTES_16);
         qp.write(B_BYTES_16);
 
-        List<AckedQueueItem> items = qp.read(1);
+        List<Element> items = qp.read(1);
         qp.resetUnused();
 
         assertEquals(2, qp.unused());

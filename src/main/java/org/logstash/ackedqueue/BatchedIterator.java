@@ -3,12 +3,12 @@ package org.logstash.ackedqueue;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class LimitedIterator<T> implements Iterator<T> {
+public class BatchedIterator<T> implements Iterator<T> {
     private Iterator<T> wrapped;
     private int limit;
     private int iterated;
 
-    public LimitedIterator(Iterator<T> wrapped, int limit) {
+    public BatchedIterator(Iterator<T> wrapped, int limit) {
         this.wrapped = wrapped;
         this.limit = limit;
     }

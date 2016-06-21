@@ -8,11 +8,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class MemoryQueuePage implements QueuePage {
+public class MemoryPage implements Page {
     private final static int INT_BYTE_SIZE = Integer.SIZE / Byte.SIZE;
     public final static int OVERHEAD_BYTES = INT_BYTE_SIZE + INT_BYTE_SIZE;
 
-    private final static List<AckedQueueItem> EMPTY_RESULT = new ArrayList<>(0);
+    private final static List<Element> EMPTY_RESULT = new ArrayList<>(0);
     private final static int EMPTY_PAGE_HEAD = 0;
 
     private ByteBuffer data;
@@ -24,22 +24,22 @@ public class MemoryQueuePage implements QueuePage {
     private RoaringBitmap unacked;
 
     // @param capacity page byte size
-    public MemoryQueuePage(int capacity) {
+    public MemoryPage(int capacity) {
         this(capacity, 0);
     }
 
     // @param capacity page byte size
     // @param index the page index number
-    public MemoryQueuePage(int capacity, int index) {
+    public MemoryPage(int capacity, int index) {
         this(capacity, index, ByteBuffer.allocate(capacity), EMPTY_PAGE_HEAD, new RoaringBitmap());
     }
 
     // @param capacity page byte size
     // @param index the page index number
     // @param data initial data for this page
-    // @param head the page head offset, @see MemoryQueuePage.findHead() if it needs to be resolved
+    // @param head the page head offset, @see MemoryPage.findHead() if it needs to be resolved
     // @param unacked initial unacked state bitmap for this page
-    public MemoryQueuePage(int capacity, int index, ByteBuffer data, int head, RoaringBitmap unacked) {
+    public MemoryPage(int capacity, int index, ByteBuffer data, int head, RoaringBitmap unacked) {
         this.data = data;
         this.index = index;
         this.capacity = capacity;
@@ -77,7 +77,7 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     @Override
-    public List<AckedQueueItem> read(int n) {
+    public List<Element> read(int n) {
         RoaringBitmap readable = readable();
 
         // empty result optimization
@@ -85,9 +85,9 @@ public class MemoryQueuePage implements QueuePage {
             return EMPTY_RESULT;
         }
 
-        List<AckedQueueItem> result = new ArrayList<>();
+        List<Element> result = new ArrayList<>();
 
-        Iterator i = new LimitedIterator(readable.iterator(), n);
+        Iterator i = new BatchedIterator(readable.iterator(), n);
         while (i.hasNext()) {
             int offset = (int) i.next();
 
@@ -100,7 +100,7 @@ public class MemoryQueuePage implements QueuePage {
             this.data.get(payload);
 
             // TODO: how/where should we track page index?
-            result.add(new AckedQueueItem(payload, 0, offset));
+            result.add(new Element(payload, 0, offset));
 
             // set this item as in-use (unset unused bit)
             unused.remove(offset);
@@ -110,13 +110,13 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     @Override
-    public List<AckedQueueItem> read(int n, int timeout) {
+    public List<Element> read(int n, int timeout) {
         // TODO: TBD
         return EMPTY_RESULT;
     }
 
     @Override
-    public void ack(List<AckedQueueItem> items) {
+    public void ack(List<Element> items) {
         items.forEach(item -> ack(item.pageOffet));
     }
 
@@ -136,7 +136,7 @@ public class MemoryQueuePage implements QueuePage {
     }
 
     @Override
-    public QueuePage setHead(int offset) {
+    public Page setHead(int offset) {
         this.head = offset;
         return this;
     }
