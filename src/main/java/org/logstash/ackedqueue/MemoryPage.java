@@ -123,8 +123,23 @@ public class MemoryPage implements Page {
     }
 
     @Override
-    public int unused() {
+    public int unusedCount() {
         return readable().getCardinality();
+    }
+
+    @Override
+    public int unackedCount() {
+        return this.unacked.getCardinality();
+    }
+
+    @Override
+    public boolean allUsed() {
+        return readable().isEmpty();
+    }
+
+    @Override
+    public boolean allAcked() {
+        return this.unacked.isEmpty();
     }
 
     @Override

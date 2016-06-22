@@ -4,6 +4,9 @@ package org.logstash.ackedqueue;
 import java.io.Closeable;
 import java.io.IOException;
 
+// TODO: add iterators for pages with unused/unacked bits? this would need to tie-in with the pagehandler
+// TODO: page method strategy, or simply just provide a simple page number interator
+
 public class Metadata implements Closeable {
     // head tracking for writes
     private long headPageIndex;

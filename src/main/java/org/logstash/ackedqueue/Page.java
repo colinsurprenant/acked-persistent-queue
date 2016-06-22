@@ -3,7 +3,6 @@ package org.logstash.ackedqueue;
 import org.roaringbitmap.RoaringBitmap;
 
 import java.io.Closeable;
-import java.util.ArrayList;
 import java.util.List;
 
 public interface Page extends Closeable {
@@ -36,7 +35,16 @@ public interface Page extends Closeable {
     void ack(int offset);
 
     // @return the number of unsued items
-    int unused();
+    int unusedCount();
+
+    // @return the number of unacked items
+    int unackedCount();
+
+    // @return true if all elements are in-use (not unused)
+    boolean allUsed();
+
+    // @return true if all elements are acked (not unacked)
+    boolean allAcked();
 
     // @return the page capacity in bytes
     int capacity();
@@ -49,4 +57,8 @@ public interface Page extends Closeable {
 
     // @return this page unacked state bitmap
     RoaringBitmap getUnacked();
+
+    // reset unused bits to the state of the unacked bits
+    // TODO: does that belongs in the interface? currently used mostly for tests
+    void resetUnused();
 }

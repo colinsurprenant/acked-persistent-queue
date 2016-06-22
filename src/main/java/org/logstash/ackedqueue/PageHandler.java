@@ -1,14 +1,13 @@
 package org.logstash.ackedqueue;
 
 
+import org.roaringbitmap.RoaringBitmap;
+
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PageHandler implements Closeable {
 
@@ -106,20 +105,40 @@ public class PageHandler implements Closeable {
 
     // mark a list of Element as acknowledged
     void ack(List<Element> items) {
-        Map<Long, List<Element>> partitions = partitionByPage(items);
+        SortedMap<Long, List<Element>> partitions = partitionByPage(items);
 
         // TODO: prioritize partition by pages that are already live/cached?
 
         for (Long pageIndex : partitions.keySet()) {
+
             Page p = page(pageIndex);
             p.ack(partitions.get(pageIndex));
 
-            // TODO: add check for fully acked page
+            if (p.allAcked()) {
+                // TODO: purge this page?
+                // TODO: bookkeeping for which are all acked so we can adjust unackedTailPageIndex at the end?
+            }
 
             // TODO: fire transaction logging here?
         }
+
+        // TODO: track unackedTailPageIndex, if we fully acked pages maybe unackedTailPageIndex needs updating?
     }
 
+    // reset all pages unused bits to the state of the unacked bits
+    public void resetUnused() {
+        // TODO: we could create an interator for pages with unused bits, see Metadata comments
+
+        // we have to start from the unacked tail and not the unused tail which moved up via the read
+        // resetting the usused bits means putting them as the unacked bit.
+        for (long i = this.meta.getUnackedTailPageIndex(); i <= this.meta.getHeadPageIndex(); i++) {
+            Page p = page(i);
+            p.resetUnused();
+        }
+
+        // finally set back unusedTailPageIndex to that of unackedTailPageIndex
+        this.meta.setUnusedTailPageIndex(this.meta.getUnackedTailPageIndex());
+    }
 
     @Override
     public void close() throws IOException {
@@ -148,13 +167,14 @@ public class PageHandler implements Closeable {
         return index >= this.meta.getHeadPageIndex();
     }
 
-    private Map<Long, List<Element>> partitionByPage(List<Element> elements) {
-        Map<Long, List<Element>> partitions = new HashMap<>();
+    // @return a SortedMap of elements partitioned by page index
+    private SortedMap<Long, List<Element>> partitionByPage(List<Element> elements) {
+        TreeMap<Long, List<Element>> partitions = new TreeMap<>();
 
         for (Element e : elements) {
             List<Element> partition = partitions.get(e.getPageIndex());
 
-            if (partition == null)) {
+            if (partition == null) {
                 partition = new ArrayList<>();
                 partitions.put(e.getPageIndex(), partition);
             }
